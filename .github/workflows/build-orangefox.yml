@@ -49,11 +49,10 @@ jobs:
             libssl-dev libwxgtk3.2-dev libxml2 libxml2-utils lzop \
             pngcrush rsync schedtool squashfs-tools xsltproc zip \
             zlib1g-dev python3 python3-pip openjdk-17-jdk adb fastboot \
-            gcc-14-aarch64-linux-gnu binutils-aarch64-linux-gnu \
-            gcc-14-arm-linux-gnueabi binutils-arm-linux-gnueabi
-          # Symlink to generic names
-          sudo ln -sf /usr/bin/aarch64-linux-gnu-gcc-14 /usr/local/bin/aarch64-linux-gnu-gcc || true
-          sudo ln -sf /usr/bin/arm-linux-gnueabi-gcc-14 /usr/local/bin/arm-linux-gnueabi-gcc || true
+            binutils-aarch64-linux-gnu binutils-arm-linux-gnueabi \
+            gcc-14-aarch64-linux-gnu gcc-14-arm-linux-gnueabi
+          sudo update-alternatives --install /usr/bin/aarch64-linux-gnu-gcc aarch64-linux-gnu-gcc /usr/bin/aarch64-linux-gnu-gcc-14 100
+          sudo update-alternatives --install /usr/bin/arm-linux-gnueabi-gcc arm-linux-gnueabi-gcc /usr/bin/arm-linux-gnueabi-gcc-14 100
 
       - name: Setup AOSP repo tool
         run: |
