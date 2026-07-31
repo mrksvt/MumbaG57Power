@@ -120,13 +120,25 @@ jobs:
 
       - name: Setup OrangeFox recovery source
         run: |
-          mkdir -p ~/OrangeFox_sync
-          cd ~/OrangeFox_sync
-          git clone --depth=1 https://gitlab.com/OrangeFox/sync.git
-          cd sync
-          ./orangefox_sync.sh \
-            --branch ${{ github.event.inputs.ORANGEFOX_BRANCH }} \
-            --path $HOME/fox_build
+          mkdir -p $HOME/fox_build
+          cd $HOME/fox_build
+          repo init \
+            -u https://github.com/minimal-manifest-twrp/platform_manifest_twrp_aosp.git \
+            -b twrp-12.1 \
+            --depth=1
+          repo sync -c --no-clone-bundle --no-tags -j$(nproc)
+          # Clone OrangeFox recovery source on top of TWRP
+          rm -rf bootable/recovery
+          git clone --depth=1 \
+            -b fox_12.1 \
+            https://gitlab.com/OrangeFox/bootable/Recovery.git \
+            bootable/recovery
+          # Clone OrangeFox vendor
+          mkdir -p vendor/recovery
+          git clone --depth=1 \
+            -b fox_12.1 \
+            https://gitlab.com/OrangeFox/vendor/recovery.git \
+            vendor/recovery
 
       - name: Extract device tree from kernel DTB
         working-directory: kernel/
