@@ -86,9 +86,21 @@ jobs:
         run: |
           mkdir -p ~/toolchain/clang
           git clone --depth=1 \
-            https://github.com/kdrag0n/proton-clang \
-            ~/toolchain/clang
+            https://github.com/Neutron-Toolchains/clang-build-catalogue \
+            ~/toolchain/clang-catalogue
+          # Get latest release tarball URL
+          CLANG_URL=$(curl -s https://api.github.com/repos/Neutron-Toolchains/clang-build-catalogue/releases/latest \
+            | grep "browser_download_url.*tar.zst" | head -1 | cut -d '"' -f 4)
+          if [ -z "$CLANG_URL" ]; then
+            # Fallback: zyc-clang
+            CLANG_URL=$(curl -s https://api.github.com/repos/ZyCromerZ/Clang/releases/latest \
+              | grep "browser_download_url.*tar.gz" | head -1 | cut -d '"' -f 4)
+            curl -L "$CLANG_URL" | tar -xz -C ~/toolchain/clang --strip-components=1
+          else
+            curl -L "$CLANG_URL" | tar -I zstd -x -C ~/toolchain/clang --strip-components=1
+          fi
           echo "CLANG_PATH=$HOME/toolchain/clang/bin" >> $GITHUB_ENV
+          ~/toolchain/clang/bin/clang --version
 
       - name: Clone kernel source
         run: |
