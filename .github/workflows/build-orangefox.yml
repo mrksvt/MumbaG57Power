@@ -120,13 +120,13 @@ jobs:
 
       - name: Setup OrangeFox recovery source
         run: |
-          mkdir -p ~/fox_build
-          cd ~/fox_build
-          repo init \
-            -u https://gitlab.com/OrangeFox/sync.git \
-            -b ${{ github.event.inputs.ORANGEFOX_BRANCH }} \
-            --depth=1
-          repo sync -c --no-clone-bundle --no-tags -j$(nproc)
+          mkdir -p ~/OrangeFox_sync
+          cd ~/OrangeFox_sync
+          git clone --depth=1 https://gitlab.com/OrangeFox/sync.git
+          cd sync
+          ./orangefox_sync.sh \
+            --branch ${{ github.event.inputs.ORANGEFOX_BRANCH }} \
+            --path $HOME/fox_build
 
       - name: Extract device tree from kernel DTB
         working-directory: kernel/
