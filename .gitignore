@@ -1,0 +1,11 @@
+# Kiro/OhMyOpenCode internals
+.codegraph
+.omo/
+
+# Build artifacts
+output/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
