@@ -193,7 +193,7 @@ jobs:
           TARGET_2ND_CPU_VARIANT := cortex-a55
           
           # Bootloader
-          TARGET_BOOTLOADER_BOARD_NAME := lahaina
+          TARGET_BOOTLOADER_BOARD_NAME := parrot
           TARGET_NO_BOOTLOADER := true
           
           # Kernel
@@ -252,7 +252,7 @@ jobs:
           BOARD_AVB_MAKE_VBMETA_IMAGE_ARGS += --flags 3
           
           # Platform
-          TARGET_BOARD_PLATFORM := lahaina
+          TARGET_BOARD_PLATFORM := parrot
           
           # OrangeFox flags
           OF_MAINTAINER := ndeso17
