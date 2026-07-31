@@ -64,7 +64,7 @@ jobs:
           echo "DEVICE_MANUFACTURER=motorola" >> $GITHUB_ENV
           echo "DEVICE_MODEL=moto_g57_power" >> $GITHUB_ENV
           echo "ARCH=arm64" >> $GITHUB_ENV
-          echo "DEFCONFIG=vendor/lahaina-qgki_defconfig" >> $GITHUB_ENV
+          echo "DEFCONFIG=gki_defconfig" >> $GITHUB_ENV
           echo "BUILD_DATE=$(date +%Y%m%d)" >> $GITHUB_ENV
 
       - name: Setup ccache
