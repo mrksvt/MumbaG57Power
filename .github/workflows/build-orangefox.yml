@@ -14,7 +14,7 @@ on:
       ORANGEFOX_BRANCH:
         description: 'OrangeFox sync branch'
         required: true
-        default: '12.1'
+        default: 'master'
       INCLUDE_KSU:
         description: 'Patch KernelSU Next into kernel?'
         required: true
