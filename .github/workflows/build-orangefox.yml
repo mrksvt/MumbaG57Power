@@ -134,13 +134,13 @@ jobs:
           # Clone OrangeFox recovery source on top of TWRP
           rm -rf bootable/recovery
           git clone --depth=1 \
-            -b fox_12.1 \
+            -b ${{ github.event.inputs.ORANGEFOX_BRANCH }} \
             https://gitlab.com/OrangeFox/bootable/Recovery.git \
             bootable/recovery
           # Clone OrangeFox vendor
           mkdir -p vendor/recovery
           git clone --depth=1 \
-            -b fox_12.1 \
+            -b ${{ github.event.inputs.ORANGEFOX_BRANCH }} \
             https://gitlab.com/OrangeFox/vendor/recovery.git \
             vendor/recovery
 
@@ -202,9 +202,13 @@ jobs:
           done
 
           if [ -z "$FOX_COMMON_MK" ]; then
-            echo "No compatible OrangeFox common makefile found under vendor/recovery/config/"
-            ls -R "$HOME/fox_build/vendor/recovery/config" || true
-            exit 1
+            echo "WARNING: No compatible OrangeFox common makefile found; continuing without vendor/recovery/config include."
+            if [ -d "$HOME/fox_build/vendor/recovery" ]; then
+              find "$HOME/fox_build/vendor/recovery" -maxdepth 2 -type f -name "*.mk" | sed "s|$HOME/fox_build/||" || true
+            fi
+            FOX_INHERIT_LINE="# No vendor/recovery common include found"
+          else
+            FOX_INHERIT_LINE="\$(call inherit-product, $FOX_COMMON_MK)"
           fi
 
           mkdir -p ~/fox_build/device/${{ env.DEVICE_MANUFACTURER }}/${{ env.DEVICE_CODENAME }}
@@ -321,7 +325,7 @@ jobs:
           $(call inherit-product, $(SRC_TARGET_DIR)/product/base.mk)
           
           # Inherit OrangeFox
-          $(call inherit-product, __FOX_COMMON_MK__)
+          __FOX_INHERIT_LINE__
           
           PRODUCT_DEVICE := mumba
           PRODUCT_NAME := omni_mumba
@@ -329,7 +333,7 @@ jobs:
           PRODUCT_MODEL := moto g57 power
           PRODUCT_MANUFACTURER := motorola
           EOF
-          sed -i "s|__FOX_COMMON_MK__|$FOX_COMMON_MK|" \
+          sed -i "s|__FOX_INHERIT_LINE__|$FOX_INHERIT_LINE|" \
             ~/fox_build/device/${{ env.DEVICE_MANUFACTURER }}/${{ env.DEVICE_CODENAME }}/omni_mumba.mk
           
           echo "Device tree generated at ~/fox_build/device/motorola/mumba"
