@@ -331,7 +331,7 @@ jobs:
           echo "Prebuilt kernel files copied."
 
       - name: Build OrangeFox Recovery
-        working-directory: ~/fox_build
+        working-directory: ${{ env.HOME }}/fox_build
         env:
           FOX_BUILD_DEVICE: mumba
           OF_MAINTAINER: ndeso17
