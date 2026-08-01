@@ -190,6 +190,23 @@ jobs:
 
       - name: Generate device tree for OrangeFox
         run: |
+          FOX_COMMON_MK=""
+          for candidate in \
+            vendor/recovery/config/common.mk \
+            vendor/recovery/config/fox_common.mk \
+            vendor/recovery/config/twrp_common.mk; do
+            if [ -f "$HOME/fox_build/$candidate" ]; then
+              FOX_COMMON_MK="$candidate"
+              break
+            fi
+          done
+
+          if [ -z "$FOX_COMMON_MK" ]; then
+            echo "No compatible OrangeFox common makefile found under vendor/recovery/config/"
+            ls -R "$HOME/fox_build/vendor/recovery/config" || true
+            exit 1
+          fi
+
           mkdir -p ~/fox_build/device/${{ env.DEVICE_MANUFACTURER }}/${{ env.DEVICE_CODENAME }}
           
           # Basic device tree BoardConfig.mk
@@ -304,7 +321,7 @@ jobs:
           $(call inherit-product, $(SRC_TARGET_DIR)/product/base.mk)
           
           # Inherit OrangeFox
-          $(call inherit-product, vendor/recovery/config/common.mk)
+          $(call inherit-product, __FOX_COMMON_MK__)
           
           PRODUCT_DEVICE := mumba
           PRODUCT_NAME := omni_mumba
@@ -312,6 +329,8 @@ jobs:
           PRODUCT_MODEL := moto g57 power
           PRODUCT_MANUFACTURER := motorola
           EOF
+          sed -i "s|__FOX_COMMON_MK__|$FOX_COMMON_MK|" \
+            ~/fox_build/device/${{ env.DEVICE_MANUFACTURER }}/${{ env.DEVICE_CODENAME }}/omni_mumba.mk
           
           echo "Device tree generated at ~/fox_build/device/motorola/mumba"
 
