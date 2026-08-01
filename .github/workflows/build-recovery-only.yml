@@ -1,0 +1,301 @@
+name: Build OrangeFox Recovery Only - Mumba (Moto G57 Power)
+
+on:
+  workflow_dispatch:
+    inputs:
+      ORANGEFOX_BRANCH:
+        description: 'OrangeFox sync branch'
+        required: true
+        default: 'fox_12.1'
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Free disk space
+        run: |
+          sudo apt-get remove -y "php*" "dotnet*" "mono*" "llvm*" "libllvm*" "ruby*" || true
+          sudo apt-get autoremove -y
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc
+          df -h
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            bc bison build-essential ccache curl flex \
+            git gnupg gperf imagemagick lib32ncurses-dev \
+            lib32readline-dev lib32z1-dev liblz4-tool libncurses5-dev \
+            libssl-dev libwxgtk3.2-dev libxml2 libxml2-utils lzop \
+            pngcrush rsync schedtool squashfs-tools xsltproc zip \
+            zlib1g-dev python3 python3-pip openjdk-17-jdk
+
+      - name: Setup AOSP repo tool
+        run: |
+          mkdir -p ~/bin
+          curl https://storage.googleapis.com/git-repo-downloads/repo > ~/bin/repo
+          chmod a+x ~/bin/repo
+          echo "$HOME/bin" >> $GITHUB_PATH
+
+      - name: Setup build environment variables
+        run: |
+          echo "DEVICE_CODENAME=mumba" >> $GITHUB_ENV
+          echo "DEVICE_MANUFACTURER=motorola" >> $GITHUB_ENV
+          echo "DEVICE_MODEL=moto_g57_power" >> $GITHUB_ENV
+          echo "BUILD_DATE=$(date +%Y%m%d)" >> $GITHUB_ENV
+
+      - name: Setup OrangeFox recovery source
+        run: |
+          mkdir -p $HOME/fox_build
+          cd $HOME/fox_build
+          repo init \
+            -u https://github.com/minimal-manifest-twrp/platform_manifest_twrp_aosp.git \
+            -b twrp-12.1 \
+            --depth=1
+          repo sync -c --no-clone-bundle --no-tags -j$(nproc)
+          rm -rf bootable/recovery
+          git clone --depth=1 \
+            -b ${{ github.event.inputs.ORANGEFOX_BRANCH }} \
+            https://gitlab.com/OrangeFox/bootable/Recovery.git \
+            bootable/recovery
+          mkdir -p vendor/recovery
+          git clone --depth=1 \
+            -b ${{ github.event.inputs.ORANGEFOX_BRANCH }} \
+            https://gitlab.com/OrangeFox/vendor/recovery.git \
+            vendor/recovery
+
+      - name: Generate device tree for OrangeFox
+        run: |
+          FOX_COMMON_MK=""
+          for candidate in \
+            vendor/recovery/config/common.mk \
+            vendor/recovery/config/fox_common.mk \
+            vendor/recovery/config/twrp_common.mk; do
+            if [ -f "$HOME/fox_build/$candidate" ]; then
+              FOX_COMMON_MK="$candidate"
+              break
+            fi
+          done
+
+          if [ -z "$FOX_COMMON_MK" ]; then
+            echo "WARNING: No compatible OrangeFox common makefile found"
+            if [ -d "$HOME/fox_build/vendor/recovery" ]; then
+              find "$HOME/fox_build/vendor/recovery" -maxdepth 2 -type f -name "*.mk" | sed "s|$HOME/fox_build/||" || true
+            fi
+            FOX_INHERIT_LINE="# No vendor/recovery common include found"
+          else
+            FOX_INHERIT_LINE="\$(call inherit-product, $FOX_COMMON_MK)"
+          fi
+
+          mkdir -p ~/fox_build/device/motorola/mumba
+
+          cat > ~/fox_build/device/motorola/mumba/BoardConfig.mk << 'EOF'
+          DEVICE_PATH := device/motorola/mumba
+
+          TARGET_ARCH := arm64
+          TARGET_ARCH_VARIANT := armv8-a
+          TARGET_CPU_ABI := arm64-v8a
+          TARGET_CPU_ABI2 :=
+          TARGET_CPU_VARIANT := cortex-a55
+          TARGET_SUPPORTS_64_BIT_APPS := true
+
+          TARGET_BOOTLOADER_BOARD_NAME := parrot
+          TARGET_NO_BOOTLOADER := true
+
+          BOARD_KERNEL_CMDLINE := \
+            console=ttyMSM0,115200n8 \
+            androidboot.hardware=qcom \
+            androidboot.console=ttyMSM0 \
+            androidboot.memcg=1 \
+            lpm_levels.sleep_disabled=1 \
+            msm_rtb.filter=0x237 \
+            service_locator.enable=1 \
+            androidboot.usbcontroller=a600000.dwc3 \
+            swiotlb=0 \
+            loop.max_part=7 \
+            cgroup.memory=nokmem,nosocket \
+            pcie_ports=compat \
+            iptable_raw.raw_before_defrag=1 \
+            ip6table_raw.raw6_before_defrag=1
+
+          BOARD_KERNEL_BASE := 0x00000000
+          BOARD_KERNEL_PAGESIZE := 4096
+          BOARD_KERNEL_IMAGE_NAME := Image
+
+          TARGET_PREBUILT_KERNEL := $(DEVICE_PATH)/prebuilt/Image
+          BOARD_PREBUILT_DTBIMAGE_DIR := $(DEVICE_PATH)/prebuilt/dtbs
+          BOARD_INCLUDE_DTB_IN_BOOTIMG := true
+          BOARD_PREBUILT_DTBOIMAGE := $(DEVICE_PATH)/prebuilt/dtbo.img
+
+          BOARD_BOOTIMAGE_PARTITION_SIZE := 100663296
+          BOARD_VENDOR_BOOTIMAGE_PARTITION_SIZE := 100663296
+          BOARD_HAS_LARGE_FILESYSTEM := true
+          BOARD_SYSTEMIMAGE_PARTITION_TYPE := ext4
+          BOARD_USERDATAIMAGE_FILE_SYSTEM_TYPE := f2fs
+          TARGET_COPY_OUT_VENDOR := vendor
+
+          TARGET_RECOVERY_PIXEL_FORMAT := RGBX_8888
+          TARGET_USERIMAGES_USE_EXT4 := true
+          TARGET_USERIMAGES_USE_F2FS := true
+          TARGET_SCREEN_WIDTH := 1080
+          TARGET_SCREEN_HEIGHT := 2400
+          TW_MAX_BRIGHTNESS := 2047
+          TW_DEFAULT_BRIGHTNESS := 1200
+          TW_BRIGHTNESS_PATH := /sys/class/backlight/panel0-backlight/brightness
+
+          AB_OTA_UPDATER := true
+          AB_OTA_PARTITIONS += \
+            boot \
+            dtbo \
+            product \
+            system \
+            system_ext \
+            vbmeta \
+            vbmeta_system \
+            vendor \
+            vendor_boot
+
+          BOARD_AVB_ENABLE := true
+          BOARD_AVB_MAKE_VBMETA_IMAGE_ARGS += --flags 3
+
+          TARGET_BOARD_PLATFORM := parrot
+
+          OF_MAINTAINER := ndeso17
+          OF_DEVICE_CODE := mumba
+          FOX_TARGET_DEVICES := mumba
+          FOX_BUILD_DEVICE := mumba
+          OF_SCREEN_H := 2400
+          OF_SCREEN_W := 1080
+          OF_STATUS_H := 100
+          OF_STATUS_INDENT_LEFT := 48
+          OF_STATUS_INDENT_RIGHT := 48
+          OF_ALLOW_DISABLE_NAVBAR := 1
+          FOX_AB_DEVICE := 1
+          OF_USE_GREEN_LED := 0
+          FOX_RECOVERY_INSTALL_PARTITION := /dev/block/bootdevice/by-name/recovery
+          EOF
+
+          cat > ~/fox_build/device/motorola/mumba/AndroidProducts.mk << 'EOF'
+          PRODUCT_MAKEFILES := \
+            $(LOCAL_DIR)/omni_mumba.mk
+
+          COMMON_LUNCH_CHOICES := \
+            omni_mumba-eng \
+            omni_mumba-userdebug
+          EOF
+
+          cat > ~/fox_build/device/motorola/mumba/omni_mumba.mk << 'EOF'
+          $(call inherit-product, $(SRC_TARGET_DIR)/product/base.mk)
+
+          __FOX_INHERIT_LINE__
+
+          PRODUCT_DEVICE := mumba
+          PRODUCT_NAME := omni_mumba
+          PRODUCT_BRAND := motorola
+          PRODUCT_MODEL := moto g57 power
+          PRODUCT_MANUFACTURER := motorola
+          EOF
+          sed -i "s|__FOX_INHERIT_LINE__|$FOX_INHERIT_LINE|" \
+            ~/fox_build/device/motorola/mumba/omni_mumba.mk
+
+          echo "Device tree generated"
+
+      - name: Copy prebuilt kernel to device tree
+        run: |
+          mkdir -p ~/fox_build/device/motorola/mumba/prebuilt/dtbs
+
+          cp $GITHUB_WORKSPACE/prebuilt/Image \
+            ~/fox_build/device/motorola/mumba/prebuilt/Image
+
+          cp $GITHUB_WORKSPACE/prebuilt/dtbs/*.dtb \
+            ~/fox_build/device/motorola/mumba/prebuilt/dtbs/
+
+          DTBO_FILES=$(find $GITHUB_WORKSPACE/prebuilt/dtbs -name "*.dtb" | sort)
+          git clone --depth=1 https://android.googlesource.com/platform/system/tools/mkbootimg ~/mkbootimg
+          if [ -n "$DTBO_FILES" ]; then
+            python3 ~/mkbootimg/mkdtimg.py create \
+              ~/fox_build/device/motorola/mumba/prebuilt/dtbo.img \
+              $DTBO_FILES 2>/dev/null || \
+            cat $DTBO_FILES > ~/fox_build/device/motorola/mumba/prebuilt/dtbo.img
+          fi
+
+          echo "Prebuilt files copied"
+
+      - name: Build OrangeFox Recovery
+        env:
+          FOX_BUILD_DEVICE: mumba
+          OF_MAINTAINER: ndeso17
+          ALLOW_MISSING_DEPENDENCIES: true
+        run: |
+          set -o pipefail
+          cd "$HOME/fox_build"
+          source build/envsetup.sh
+          lunch omni_mumba-eng
+          mka recoveryimage -j$(nproc) 2>&1 | tee $GITHUB_WORKSPACE/recovery_build.log
+
+      - name: Package artifacts
+        run: |
+          mkdir -p $GITHUB_WORKSPACE/output
+          echo "=== Build output ===" && ls -lh ~/fox_build/out/target/product/mumba/ || echo "No output dir"
+
+          cp ~/fox_build/out/target/product/mumba/OrangeFox*.img \
+            $GITHUB_WORKSPACE/output/ 2>/dev/null || \
+          cp ~/fox_build/out/target/product/mumba/recovery.img \
+            $GITHUB_WORKSPACE/output/OrangeFox-mumba-${{ env.BUILD_DATE }}.img 2>/dev/null || \
+          echo "WARNING: recovery.img not found"
+
+          cp ~/fox_build/out/target/product/mumba/OrangeFox*.zip \
+            $GITHUB_WORKSPACE/output/ 2>/dev/null || true
+
+          cp $GITHUB_WORKSPACE/prebuilt/init_boot.img \
+            $GITHUB_WORKSPACE/output/init_boot-mumba-${{ env.BUILD_DATE }}.img 2>/dev/null || \
+          echo "WARNING: init_boot.img not found"
+
+          ls -lh $GITHUB_WORKSPACE/output/
+
+      - name: Upload recovery build log
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: recovery-logs-${{ env.BUILD_DATE }}
+          path: recovery_build.log
+          retention-days: 7
+
+      - name: Upload OrangeFox Recovery
+        uses: actions/upload-artifact@v5
+        with:
+          name: OrangeFox-mumba-${{ env.BUILD_DATE }}
+          path: output/
+          retention-days: 30
+
+      - name: Create GitHub Release
+        if: success()
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: OrangeFox-mumba-${{ env.BUILD_DATE }}
+          name: OrangeFox Recovery - Moto G57 Power (${{ env.BUILD_DATE }})
+          body: |
+            ## OrangeFox Recovery for Moto G57 Power (mumba)
+
+            **Build Info:**
+            - Device: Moto G57 Power (mumba) — SM6435 (Snapdragon 6s Gen 4)
+            - Kernel: Prebuilt (Linux 6.6.87, KernelSU Next patched)
+            - OrangeFox Branch: `${{ github.event.inputs.ORANGEFOX_BRANCH }}`
+            - Build Date: ${{ env.BUILD_DATE }}
+
+            **Flash Instructions:**
+            ```
+            fastboot flash recovery OrangeFox-mumba-*.img
+            fastboot reboot recovery
+            ```
+
+            > ⚠️ Bootloader must be unlocked before flashing.
+          files: output/*
+          draft: false
+          prerelease: true
