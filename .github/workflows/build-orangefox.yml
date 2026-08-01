@@ -388,6 +388,7 @@ jobs:
         env:
           FOX_BUILD_DEVICE: mumba
           OF_MAINTAINER: ndeso17
+          ALLOW_MISSING_DEPENDENCIES: true
         run: |
           set -o pipefail
           cd "$HOME/fox_build"
