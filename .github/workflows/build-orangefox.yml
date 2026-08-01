@@ -309,7 +309,6 @@ jobs:
           OF_ALLOW_DISABLE_NAVBAR := 1
           FOX_AB_DEVICE := 1
           OF_USE_GREEN_LED := 0
-          FOX_USE_TWRP_RECOVERY_IMAGE_BUILDER := 1
           FOX_RECOVERY_INSTALL_PARTITION := /dev/block/bootdevice/by-name/recovery
           EOF
           
