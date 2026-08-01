@@ -304,7 +304,7 @@ jobs:
           $(call inherit-product, $(SRC_TARGET_DIR)/product/base.mk)
           
           # Inherit OrangeFox
-          $(call inherit-product, vendor/omni/config/common.mk)
+          $(call inherit-product, vendor/recovery/config/common.mk)
           
           PRODUCT_DEVICE := mumba
           PRODUCT_NAME := omni_mumba
