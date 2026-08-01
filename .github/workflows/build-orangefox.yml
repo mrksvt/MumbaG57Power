@@ -267,6 +267,8 @@ jobs:
           TARGET_RECOVERY_PIXEL_FORMAT := RGBX_8888
           TARGET_USERIMAGES_USE_EXT4 := true
           TARGET_USERIMAGES_USE_F2FS := true
+          TARGET_SCREEN_WIDTH := 1080
+          TARGET_SCREEN_HEIGHT := 2400
           
           # A/B
           AB_OTA_UPDATER := true
