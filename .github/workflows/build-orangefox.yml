@@ -405,8 +405,8 @@ jobs:
       - name: Package artifacts
         run: |
           mkdir -p $GITHUB_WORKSPACE/output
+          echo "=== Build output ===" && ls -lh ~/fox_build/out/target/product/mumba/ || echo "No output dir"
           
-          # Recovery image
           cp ~/fox_build/out/target/product/mumba/OrangeFox*.img \
             $GITHUB_WORKSPACE/output/ 2>/dev/null || \
           cp ~/fox_build/out/target/product/mumba/recovery.img \
