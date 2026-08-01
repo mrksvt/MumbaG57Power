@@ -173,6 +173,7 @@ jobs:
       - name: Build kernel for recovery
         working-directory: kernel/
         run: |
+          set -o pipefail
           export PATH="$CLANG_PATH:$PATH"
           export CROSS_COMPILE=aarch64-linux-gnu-
           export CROSS_COMPILE_ARM32=arm-linux-gnueabi-
@@ -184,6 +185,7 @@ jobs:
             CLANG_TRIPLE=aarch64-linux-gnu- \
             CROSS_COMPILE=aarch64-linux-gnu- \
             CROSS_COMPILE_COMPAT=arm-linux-gnueabi- \
+            KCFLAGS="-Wno-error=default-const-init-var-unsafe -Wno-error=default-const-init-field-unsafe" \
             -j$(nproc) 2>&1 | tee ../build.log
 
       - name: Generate device tree for OrangeFox
@@ -334,6 +336,7 @@ jobs:
           FOX_BUILD_DEVICE: mumba
           OF_MAINTAINER: ndeso17
         run: |
+          set -o pipefail
           source build/envsetup.sh
           lunch omni_mumba-eng
           mka recoveryimage -j$(nproc) 2>&1 | tee $GITHUB_WORKSPACE/recovery_build.log
