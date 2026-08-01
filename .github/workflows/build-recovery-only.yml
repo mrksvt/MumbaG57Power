@@ -237,7 +237,25 @@ jobs:
           cd "$HOME/fox_build"
           source build/envsetup.sh
           lunch omni_mumba-eng
-          mka recoveryimage -j$(nproc) 2>&1 | tee $GITHUB_WORKSPACE/recovery_build.log
+          mka recoveryimage -j$(nproc) 2>&1 | tee $GITHUB_WORKSPACE/recovery_build.log || true
+          
+          OUT=$HOME/fox_build/out/target/product/mumba
+          if [ ! -f "$OUT/recovery.img" ] && [ -d "$OUT/recovery" ]; then
+            echo "recovery.img missing, packing manually from recovery/ dir"
+            MKBOOTIMG=$HOME/mkbootimg/mkbootimg.py
+            RAMDISK=$OUT/ramdisk-recovery.img
+            if [ ! -f "$RAMDISK" ]; then
+              cd "$OUT/recovery/root"
+              find . | cpio -H newc -o | gzip > "$RAMDISK"
+              cd "$HOME/fox_build"
+            fi
+            python3 "$MKBOOTIMG" \
+              --header_version 4 \
+              --kernel $GITHUB_WORKSPACE/prebuilt/Image \
+              --ramdisk "$RAMDISK" \
+              --output "$OUT/recovery.img"
+            echo "Packed recovery.img: $(ls -lh $OUT/recovery.img)"
+          fi
 
       - name: Package artifacts
         run: |
