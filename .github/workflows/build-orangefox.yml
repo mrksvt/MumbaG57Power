@@ -293,7 +293,7 @@ jobs:
           # OrangeFox flags
           OF_MAINTAINER := ndeso17
           OF_DEVICE_CODE := mumba
-          OF_TARGET_DEVICES := mumba
+          FOX_TARGET_DEVICES := mumba
           FOX_BUILD_DEVICE := mumba
           OF_SCREEN_H := 2400
           OF_SCREEN_W := 1080
@@ -301,7 +301,7 @@ jobs:
           OF_STATUS_INDENT_LEFT := 48
           OF_STATUS_INDENT_RIGHT := 48
           OF_ALLOW_DISABLE_NAVBAR := 1
-          OF_AB_DEVICE := 1
+          FOX_AB_DEVICE := 1
           OF_USE_GREEN_LED := 0
           FOX_USE_TWRP_RECOVERY_IMAGE_BUILDER := 1
           FOX_RECOVERY_INSTALL_PARTITION := /dev/block/bootdevice/by-name/recovery
