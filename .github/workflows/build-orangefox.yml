@@ -419,6 +419,10 @@ jobs:
             $GITHUB_WORKSPACE/output/boot-ksu-mumba-${{ env.BUILD_DATE }}.img 2>/dev/null || \
           echo "WARNING: boot.img not found"
           
+          cp $GITHUB_WORKSPACE/prebuilt/init_boot.img \
+            $GITHUB_WORKSPACE/output/init_boot-mumba-${{ env.BUILD_DATE }}.img 2>/dev/null || \
+          echo "WARNING: init_boot.img not found"
+          
           ls -lh $GITHUB_WORKSPACE/output/
 
       - name: Upload build log
