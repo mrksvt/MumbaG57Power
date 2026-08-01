@@ -14,7 +14,7 @@ on:
       ORANGEFOX_BRANCH:
         description: 'OrangeFox sync branch'
         required: true
-        default: 'master'
+        default: 'fox_12.1'
       INCLUDE_KSU:
         description: 'Patch KernelSU Next into kernel?'
         required: true
@@ -224,12 +224,6 @@ jobs:
           TARGET_CPU_ABI2 :=
           TARGET_CPU_VARIANT := cortex-a55
           
-          TARGET_2ND_ARCH := arm
-          TARGET_2ND_ARCH_VARIANT := armv8-2a
-          TARGET_2ND_CPU_ABI := armeabi-v7a
-          TARGET_2ND_CPU_ABI2 := armeabi
-          TARGET_2ND_CPU_VARIANT := cortex-a55
-          
           # Bootloader
           TARGET_BOOTLOADER_BOARD_NAME := parrot
           TARGET_NO_BOOTLOADER := true
@@ -351,7 +345,38 @@ jobs:
             -name "*.dtb" \
             -exec cp {} ~/fox_build/device/${{ env.DEVICE_MANUFACTURER }}/${{ env.DEVICE_CODENAME }}/prebuilt/dtbs/ \;
           
+          DTBO_DIR=$GITHUB_WORKSPACE/kernel/out/arch/arm64/boot/dts
+          DTBO_FILES=$(find "$DTBO_DIR" -name "*.dtb" | sort)
+          if [ -n "$DTBO_FILES" ]; then
+            # Use mkdtimg to create dtbo.img
+            pip3 install mkdtimg 2>/dev/null || true
+            # Fallback: use dtbtool or cat DTBs into raw dtbo.img
+            if command -v mkdtimg &>/dev/null; then
+              mkdtimg create \
+                ~/fox_build/device/${{ env.DEVICE_MANUFACTURER }}/${{ env.DEVICE_CODENAME }}/prebuilt/dtbo.img \
+                $DTBO_FILES
+            else
+              # Simple concatenation fallback
+              cat $DTBO_FILES > ~/fox_build/device/${{ env.DEVICE_MANUFACTURER }}/${{ env.DEVICE_CODENAME }}/prebuilt/dtbo.img
+            fi
+            echo "dtbo.img created"
+          else
+            echo "WARNING: No DTB files found for dtbo.img"
+          fi
+          
           echo "Prebuilt kernel files copied."
+
+      - name: Build boot.img with new kernel
+        run: |
+          KERNEL_IMAGE=$GITHUB_WORKSPACE/kernel/out/arch/arm64/boot/Image
+          OUT_BOOT=$GITHUB_WORKSPACE/output/boot.img
+          mkdir -p $GITHUB_WORKSPACE/output
+          mkbootimg \
+            --header_version 4 \
+            --kernel "$KERNEL_IMAGE" \
+            --output "$OUT_BOOT"
+          echo "BOOT_IMG=$OUT_BOOT" >> $GITHUB_ENV
+          ls -lh "$OUT_BOOT"
 
       - name: Build OrangeFox Recovery
         env:
@@ -378,6 +403,11 @@ jobs:
           # Recovery zip (if generated)
           cp ~/fox_build/out/target/product/mumba/OrangeFox*.zip \
             $GITHUB_WORKSPACE/output/ 2>/dev/null || true
+          
+          # boot.img with new KernelSU-patched kernel
+          cp $GITHUB_WORKSPACE/output/boot.img \
+            $GITHUB_WORKSPACE/output/boot-ksu-mumba-${{ env.BUILD_DATE }}.img 2>/dev/null || \
+          echo "WARNING: boot.img not found"
           
           ls -lh $GITHUB_WORKSPACE/output/
 
@@ -415,9 +445,8 @@ jobs:
             
             **Flash Instructions:**
             ```
-            fastboot flash vendor_boot OrangeFox-mumba-*.img
-            # or
             fastboot flash recovery OrangeFox-mumba-*.img
+            fastboot flash boot boot-ksu-mumba-*.img
             fastboot reboot recovery
             ```
             

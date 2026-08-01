@@ -11,8 +11,9 @@ Build OrangeFox Recovery for Motorola Moto G57 Power via GitHub Actions.
 | Android | 16 |
 | Build | W1WAAS36.48-12-16-3 |
 | Security Patch | 2026-03-01 |
-| Platform | lahaina (SM6375) |
-| Architecture | arm64 |
+| SoC | SM6435 (Snapdragon 6s Gen 4) |
+| Platform | parrot |
+| Architecture | arm64 (pure 64-bit) |
 | Partition | A/B (VAB) |
 
 ## Build via GitHub Actions
@@ -24,7 +25,7 @@ Build OrangeFox Recovery for Motorola Moto G57 Power via GitHub Actions.
 5. Fill params:
    - `KERNEL_SOURCE` — default: Motorola official kernel
    - `KERNEL_BRANCH` — default: `MMI-W1WAAS36.48-12-16-3`
-   - `ORANGEFOX_BRANCH` — default: `12.1`
+   - `ORANGEFOX_BRANCH` — default: `fox_12.1`
    - `INCLUDE_KSU` — patch KernelSU Next into kernel (default: true)
    - `KSU_VERSION` — KernelSU Next version tag (default: main)
 6. Download artifact from Actions run
@@ -32,8 +33,7 @@ Build OrangeFox Recovery for Motorola Moto G57 Power via GitHub Actions.
 ## Flash Instructions
 
 ```bash
-# Requires unlocked bootloader
-fastboot flash vendor_boot OrangeFox-mumba-*.img
+fastboot flash recovery OrangeFox-mumba-*.img
 fastboot reboot recovery
 ```
 

@@ -7,7 +7,6 @@ output/
 *.log
 
 # Large partition images (too big for GitHub, keep local)
-prebuilt/*.img
 prebuilt/unpacked/
 
 # OS
